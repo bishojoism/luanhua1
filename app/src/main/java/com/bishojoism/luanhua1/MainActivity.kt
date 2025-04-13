@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -45,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.arthenica.ffmpegkit.FFmpegSession
 import com.bishojoism.luanhua1.ui.theme.Luanhua1Theme
 import okhttp3.OkHttpClient
@@ -78,6 +80,16 @@ fun Greeting(modifier: Modifier = Modifier) {
     var url by remember { mutableStateOf("") }
     var session by remember { mutableStateOf<FFmpegSession?>(null) }
     var getting by remember { mutableStateOf(false) }
+    val getSrc = { webView: WebView, url: String, callback: (src: String?) -> Unit ->
+        webView.loadUrl(url)
+        Handler(Looper.getMainLooper()).postDelayed({
+            if (!getting) return@postDelayed
+            webView.evaluateJavascript("document.querySelector('video').src") { src ->
+                if (!getting) return@evaluateJavascript
+                callback(if (src == "null") null else src.substring(1 until src.length - 1))
+            }
+        }, 3000)
+    }
     val encryption = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) {
@@ -151,62 +163,62 @@ fun Greeting(modifier: Modifier = Modifier) {
                         getting = true
                         WebView(context).apply {
                             settings.javaScriptEnabled = true
-                            loadUrl(
-                                "https://jx.xmflv.com/?url=${
-                                    URLEncoder.encode(
-                                        url,
-                                        StandardCharsets.UTF_8
-                                    )
-                                }"
-                            )
-                            Handler(Looper.getMainLooper()).postDelayed({
-                                if (!getting) return@postDelayed
-                                evaluateJavascript("document.querySelector('video').src") { url ->
-                                    if (!getting) return@evaluateJavascript
-                                    if (url == "null") {
-                                        Toast.makeText(
-                                            context,
-                                            "寻找视频失败……",
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                        getting = false
-                                        return@evaluateJavascript
-                                    }
-                                    Thread {
-                                        val response = OkHttpClient()
-                                            .newCall(
-                                                Request
-                                                    .Builder()
-                                                    .url(url.substring(1 until url.length - 1))
-                                                    .build()
-                                            )
-                                            .execute()
-                                        if (!getting) return@Thread
-                                        response
-                                            .body
-                                            ?.byteStream()
-                                            ?.use { input ->
-                                                File(context.cacheDir, "input.mp4")
-                                                    .outputStream()
-                                                    .use { output ->
-                                                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                                                        var bytes = input.read(buffer)
-                                                        if (!getting) return@Thread
-                                                        while (bytes >= 0) {
-                                                            output.write(buffer, 0, bytes)
-                                                            if (!getting) return@Thread
-                                                            bytes = input.read(buffer)
-                                                            if (!getting) return@Thread
-                                                        }
-                                                        getting = false
-                                                        session = jiami(context, seed) {
-                                                            session = null
-                                                        }
-                                                    }
-                                            }
-                                    }.start()
+                            settings.userAgentString = context.getString(R.string.user_agent)
+                            getSrc(
+                                this,
+                                if (url.startsWith("https://tieba.baidu.com/"))
+                                    url
+                                else
+                                    "https://jx.xmflv.com/?url=${
+                                        URLEncoder.encode(
+                                            url,
+                                            StandardCharsets.UTF_8
+                                        )
+                                    }"
+                            ) {
+                                if (it == null) {
+                                    Toast.makeText(
+                                        context,
+                                        "寻找视频失败……",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                    getting = false
+                                    return@getSrc
                                 }
-                            }, 3000)
+                                Thread {
+                                    val response = OkHttpClient()
+                                        .newCall(
+                                            Request
+                                                .Builder()
+                                                .url(it)
+                                                .build()
+                                        )
+                                        .execute()
+                                    if (!getting) return@Thread
+                                    response
+                                        .body
+                                        ?.byteStream()
+                                        ?.use { input ->
+                                            File(context.cacheDir, "input.mp4")
+                                                .outputStream()
+                                                .use { output ->
+                                                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                                                    var bytes = input.read(buffer)
+                                                    if (!getting) return@Thread
+                                                    while (bytes >= 0) {
+                                                        output.write(buffer, 0, bytes)
+                                                        if (!getting) return@Thread
+                                                        bytes = input.read(buffer)
+                                                        if (!getting) return@Thread
+                                                    }
+                                                    getting = false
+                                                    session = jiami(context, seed) {
+                                                        session = null
+                                                    }
+                                                }
+                                        }
+                                }.start()
+                            }
                         }
                     }) {
                         Text("解析并加密")
@@ -215,62 +227,62 @@ fun Greeting(modifier: Modifier = Modifier) {
                         getting = true
                         WebView(context).apply {
                             settings.javaScriptEnabled = true
-                            loadUrl(
-                                "https://jx.xmflv.com/?url=${
-                                    URLEncoder.encode(
-                                        url,
-                                        StandardCharsets.UTF_8
-                                    )
-                                }"
-                            )
-                            Handler(Looper.getMainLooper()).postDelayed({
-                                if (!getting) return@postDelayed
-                                evaluateJavascript("document.querySelector('video').src") { url ->
-                                    if (!getting) return@evaluateJavascript
-                                    if (url == "null") {
-                                        Toast.makeText(
-                                            context,
-                                            "寻找视频失败……",
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                        getting = false
-                                        return@evaluateJavascript
-                                    }
-                                    Thread {
-                                        val response = OkHttpClient()
-                                            .newCall(
-                                                Request
-                                                    .Builder()
-                                                    .url(url.substring(1 until url.length - 1))
-                                                    .build()
-                                            )
-                                            .execute()
-                                        if (!getting) return@Thread
-                                        response
-                                            .body
-                                            ?.byteStream()
-                                            ?.use { input ->
-                                                File(context.cacheDir, "input.mp4")
-                                                    .outputStream()
-                                                    .use { output ->
-                                                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                                                        var bytes = input.read(buffer)
-                                                        if (!getting) return@Thread
-                                                        while (bytes >= 0) {
-                                                            output.write(buffer, 0, bytes)
-                                                            if (!getting) return@Thread
-                                                            bytes = input.read(buffer)
-                                                            if (!getting) return@Thread
-                                                        }
-                                                        getting = false
-                                                        session = jiemi(context, seed) {
-                                                            session = null
-                                                        }
-                                                    }
-                                            }
-                                    }.start()
+                            settings.userAgentString = context.getString(R.string.user_agent)
+                            getSrc(
+                                this,
+                                if (url.startsWith("https://tieba.baidu.com/"))
+                                    url
+                                else
+                                    "https://jx.xmflv.com/?url=${
+                                        URLEncoder.encode(
+                                            url,
+                                            StandardCharsets.UTF_8
+                                        )
+                                    }"
+                            ) {
+                                if (it == null) {
+                                    Toast.makeText(
+                                        context,
+                                        "寻找视频失败……",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                    getting = false
+                                    return@getSrc
                                 }
-                            }, 3000)
+                                Thread {
+                                    val response = OkHttpClient()
+                                        .newCall(
+                                            Request
+                                                .Builder()
+                                                .url(it)
+                                                .build()
+                                        )
+                                        .execute()
+                                    if (!getting) return@Thread
+                                    response
+                                        .body
+                                        ?.byteStream()
+                                        ?.use { input ->
+                                            File(context.cacheDir, "input.mp4")
+                                                .outputStream()
+                                                .use { output ->
+                                                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                                                    var bytes = input.read(buffer)
+                                                    if (!getting) return@Thread
+                                                    while (bytes >= 0) {
+                                                        output.write(buffer, 0, bytes)
+                                                        if (!getting) return@Thread
+                                                        bytes = input.read(buffer)
+                                                        if (!getting) return@Thread
+                                                    }
+                                                    getting = false
+                                                    session = jiemi(context, seed) {
+                                                        session = null
+                                                    }
+                                                }
+                                        }
+                                }.start()
+                            }
                         }
                     }) {
                         Text("解析并解密")
@@ -278,6 +290,37 @@ fun Greeting(modifier: Modifier = Modifier) {
                 }
             }
         )
+        Row {
+            Button(onClick = {
+                context.startActivity(
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        "https://github.com/bishojoism/luanhua1".toUri()
+                    )
+                )
+            }) {
+                Text("软件源代码")
+            }
+            Button(onClick = {
+                context.startActivity(
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        "https://github.com/bishojoism/luanhua1/releases/latest".toUri()
+                    )
+                )
+            }) {
+                Text("软件下载页")
+            }
+        }
+//        AndroidView(factory = { WebView(it).apply {
+//            settings.javaScriptEnabled = true
+//            settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0"
+//            layoutParams = ViewGroup.LayoutParams(
+//                ViewGroup.LayoutParams.MATCH_PARENT,
+//                ViewGroup.LayoutParams.WRAP_CONTENT
+//            )
+//            loadUrl("https://tieba.baidu.com/p/9382545786?share=9105&fr=sharewise&share_from=post&sfc=copy&client_type=2&client_version=12.81.1.0&st=1744549577&is_video=true&unique=81F5DB2BD4F8CB81F92047EDF723858B")
+//        }})
     }
     if (session != null) {
         BasicAlertDialog(
