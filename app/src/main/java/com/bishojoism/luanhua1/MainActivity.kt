@@ -54,7 +54,6 @@ import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -172,7 +171,7 @@ fun Greeting(modifier: Modifier = Modifier) {
                                     "https://jx.xmflv.com/?url=${
                                         URLEncoder.encode(
                                             url,
-                                            StandardCharsets.UTF_8
+                                            "UTF-8"
                                         )
                                     }"
                             ) {
@@ -236,7 +235,7 @@ fun Greeting(modifier: Modifier = Modifier) {
                                     "https://jx.xmflv.com/?url=${
                                         URLEncoder.encode(
                                             url,
-                                            StandardCharsets.UTF_8
+                                            "UTF-8"
                                         )
                                     }"
                             ) {

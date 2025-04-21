@@ -2,7 +2,7 @@ package com.bishojoism.luanhua1
 
 import kotlin.random.Random
 
-val N = 120
+private const val N = 120
 
 fun encrypt(seed: String): String {
     return generate(shuffle(seed))
